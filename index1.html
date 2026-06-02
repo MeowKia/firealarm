@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自动火灾报警系统</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+body{
+    background:#08111f;
+    color:white;
+    font-family:Arial,sans-serif;
+    padding:6px;
+    overflow:auto;
+}
+
+.header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:10px;
+}
+
+h1{
+    color:#4fc3ff;
+    font-size:24px;
+    text-shadow:0 0 8px #4fc3ff;
+}
+
+.info{
+    font-size:12px;
+    text-align:right;
+}
+
+.nav{
+    display:flex;
+    gap:8px;
+    margin-bottom:10px;
+}
+
+.nav button{
+    flex:1;
+    height:40px;
+    font-size:15px;
+}
+
+button{
+    padding:6px 10px;
+    border:none;
+    border-radius:6px;
+    background:#123d6b;
+    color:white;
+    cursor:pointer;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:6px;
+    margin-bottom:10px;
+}
+
+.card,
+.panel{
+    background:#0f1c2e;
+    border:1px solid #2fa8ff;
+    box-shadow:0 0 8px rgba(47,168,255,.5);
+    border-radius:10px;
+    padding:10px;
+    min-width:0;
+}
+
+.card h3,
+.panel h2{
+    color:#4fc3ff;
+    margin-bottom:6px;
+    font-size:14px;
+}
+
+.value{
+    font-size:22px;
+    font-weight:bold;
+}
+
+.main{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+}
+
+.charts{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+}
+
+.chart-box{
+    height:300px;
+}
+
+canvas{
+    width:100% !important;
+    height:100% !important;
+}
+
+input[type=range]{
+    width:100%;
+}
+
+p{
+    margin:8px 0;
+    font-size:13px;
+}
+
+.online{
+    color:#00ff7f;
+}
+
+.alarm{
+    color:#ff4d4d;
+    animation:flashAlarm 1s infinite;
+}
+
+@keyframes flashAlarm{
+    0%{
+        text-shadow:0 0 5px #ff4d4d;
+    }
+    50%{
+        text-shadow:0 0 20px #ff0000;
+    }
+    100%{
+        text-shadow:0 0 5px #ff4d4d;
+    }
+}
+
+@media (max-width:768px){
+
+    .header{
+        flex-direction:column;
+        align-items:flex-start;
+        gap:6px;
+    }
+
+    h1{
+        font-size:18px;
+    }
+
+    .grid{
+        grid-template-columns:repeat(2,1fr);
+    }
+
+    .main{
+        grid-template-columns:1fr;
+    }
+
+    .charts{
+        grid-template-columns:1fr;
+    }
+
+    .chart-box{
+        height:220px;
+    }
+
+    .value{
+        font-size:18px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    <h1>自动火灾报警系统监控平台</h1>
+
+    <div class="info">
+        设备编号：FA-001
+    </div>
+</div>
+
+<div class="nav">
+    <button onclick="showPage(1)">监测中心</button>
+    <button onclick="showPage(2)">控制中心</button>
+</div>
+
+<!-- 监测中心 -->
+<div id="page1">
+
+    <div class="grid">
+
+        <div class="card">
+            <h3>设备状态</h3>
+            <div class="value online">在线</div>
+        </div>
+
+        <div class="card">
+            <h3>火灾状态</h3>
+            <div id="fireStatus" class="value">正常</div>
+        </div>
+
+        <div class="card">
+            <h3>温度</h3>
+            <div id="temp" class="value">30℃</div>
+        </div>
+
+        <div class="card">
+            <h3>烟雾浓度</h3>
+            <div id="smoke" class="value">810ppm</div>
+        </div>
+
+        <div class="card">
+            <h3>烟雾浓度等级</h3>
+            <div class="value">9级</div>
+        </div>
+
+    </div>
+
+    <div class="charts">
+
+        <div class="panel chart-box">
+            <h2>温度历史曲线</h2>
+            <canvas id="tempChart"></canvas>
+        </div>
+
+        <div class="panel chart-box">
+            <h2>烟雾历史曲线</h2>
+            <canvas id="smokeChart"></canvas>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- 控制中心 -->
+<div id="page2" style="display:none">
+
+    <div class="main">
+
+        <div class="panel">
+
+            <h2>阈值设置</h2>
+
+            <p>
+                温度阈值：
+                <span id="tempText">50</span>℃
+            </p>
+
+            <input
+                id="tempLimit"
+                type="range"
+                min="0"
+                max="100"
+                value="50">
+
+            <p>
+                烟雾阈值：
+                <span id="smokeText">500</span>ppm
+            </p>
+
+            <input
+                id="smokeLimit"
+                type="range"
+                min="100"
+                max="1000"
+                value="500">
+
+        </div>
+
+        <div class="panel">
+
+            <h2>设备控制</h2>
+
+            <p>
+                风扇状态：
+                <span id="fan">开启</span>
+            </p>
+
+            <button onclick="fan.innerText='开启'">开启</button>
+            <button onclick="fan.innerText='关闭'">关闭</button>
+
+            <p>
+                水泵状态：
+                <span id="pump">开启</span>
+            </p>
+
+            <button onclick="pump.innerText='开启'">开启</button>
+            <button onclick="pump.innerText='关闭'">关闭</button>
+
+        </div>
+
+    </div>
+
+</div>
+<script>
+
+// 请求通知权限
+if ("Notification" in window) {
+    Notification.requestPermission();
+}
+
+// 防止重复通知
+let alarmSent = false;
+
+// 页面切换
+function showPage(page){
+
+    page1.style.display =
+        page===1 ? "block" : "none";
+
+    page2.style.display =
+        page===2 ? "block" : "none";
+}
+
+// 阈值滑块事件
+tempLimit.oninput = ()=>{
+
+    tempText.innerText =
+        tempLimit.value;
+
+    checkAlarm();
+};
+
+smokeLimit.oninput = ()=>{
+
+    smokeText.innerText =
+        smokeLimit.value;
+
+    checkAlarm();
+};
+
+// 报警检测
+function checkAlarm(){
+
+    // 后面接ESP8266时
+    // 改这里即可
+    const currentTemp = 30;
+    const currentSmoke = 810;
+
+    const tempThreshold =
+        Number(tempLimit.value);
+
+    const smokeThreshold =
+        Number(smokeLimit.value);
+
+    if(
+        currentTemp >= tempThreshold ||
+        currentSmoke >= smokeThreshold
+    ){
+
+        fireStatus.innerText =
+            "火灾报警";
+
+        fireStatus.classList.add(
+            "alarm"
+        );
+
+        fan.innerText = "开启";
+        pump.innerText = "开启";
+
+        // 浏览器通知
+        if(
+            Notification.permission === "granted"
+            &&
+            !alarmSent
+        ){
+
+            new Notification(
+                "⚠️ 火灾报警",
+                {
+                    body:
+                    `温度:${currentTemp}℃\n烟雾:${currentSmoke}ppm`
+                }
+            );
+
+            alarmSent = true;
+        }
+
+    }else{
+
+        fireStatus.innerText =
+            "正常";
+
+        fireStatus.classList.remove(
+            "alarm"
+        );
+
+        fan.innerText = "关闭";
+        pump.innerText = "关闭";
+
+        alarmSent = false;
+    }
+}
+
+// X轴数据
+const labels =
+    [...Array(12)]
+    .map((_,i)=>i+1);
+
+// 温度历史数据
+const tempData = [
+    26,27,28,29,
+    30,29,30,31,
+    30,29,30,30
+];
+
+// 烟雾历史数据
+const smokeData = [
+    720,740,760,780,
+    790,800,805,810,
+    808,812,809,810
+];
+
+// 温度曲线
+new Chart(
+    document.getElementById(
+        "tempChart"
+    ),
+    {
+        type:"line",
+
+        data:{
+            labels,
+
+            datasets:[
+                {
+                    label:"温度(℃)",
+
+                    data:tempData,
+
+                    borderWidth:2,
+
+                    tension:0.3
+                }
+            ]
+        },
+
+        options:{
+            responsive:true,
+            maintainAspectRatio:false
+        }
+    }
+);
+
+// 烟雾曲线
+new Chart(
+    document.getElementById(
+        "smokeChart"
+    ),
+    {
+        type:"line",
+
+        data:{
+            labels,
+
+            datasets:[
+                {
+                    label:"烟雾(ppm)",
+
+                    data:smokeData,
+
+                    borderWidth:2,
+
+                    tension:0.3
+                }
+            ]
+        },
+
+        options:{
+            responsive:true,
+            maintainAspectRatio:false
+        }
+    }
+);
+
+// 页面加载后检测一次
+checkAlarm();
+
+</script>
+
+</body>
+</html>
